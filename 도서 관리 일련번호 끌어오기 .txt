@@ -1,0 +1,7 @@
+-- <<도서관리>> 
+-- 1. 도서코드 자동세팅
+-- 1-1. 선택된 분야의 코드를 가져온다
+select c_code from coden where c_name = '여행';
+-- 1-2. 해당 분야의 도서 권수 count
+select count(*) from bookInfo where b_code like 'J___';
+-- 이후는 java에서 가져온 count(*)에 +1하고 자리수 맞춰서 처리해서 setting
