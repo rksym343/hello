@@ -1,0 +1,20 @@
+-- 출판사 수정 / 입력 / 출력 -------------
+
+-- 0. 출판사 데이터들 출력 [출판사코드], [출판사명], [담당자명], [출판사번호], [우편번호], [주소] 출력
+SELECT p_code, publisher, p_name, p_tel, p_zip_code, p_address FROM book_project.publisherinfo;
+-- 1. 입력
+-- 1-1. 현존하는 출판사 데이터 개수 count
+select count(*) from book_project.publisherinfo; -- 23
+-- java에서 반환된 데이터 개수 +1 하고 자리수 채우고, 앞에  P 붙여서 'P024' 출판사코드 자동셋팅
+-- 1-2. 출판사 데이터 추가
+INSERT INTO book_project.publisherinfo (p_code, publisher, p_name, p_tel, p_zip_code, p_address) 
+VALUES('P024', '나나출판사', '담당자', '053-777-7777',12345, '대구광역시 어디어디어디');
+-- 1-3. 추가후 추가된 출판사 포함 데이터들 출력 
+SELECT p_code, publisher, p_name, p_tel, p_zip_code, p_address FROM book_project.publisherinfo;
+
+-- 2. 수정
+UPDATE book_project.publisherinfo
+SET publisher='수정된 출판사', p_name='수정된 담당자', p_tel='123-127', p_zip_code=12345, p_address=''
+WHERE p_code='P024';
+-- 2-1. 수정후 추가된 출판사 포함 데이터들 출력 
+SELECT p_code, publisher, p_name, p_tel, p_zip_code, p_address FROM book_project.publisherinfo;

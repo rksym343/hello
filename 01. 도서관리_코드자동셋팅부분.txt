@@ -1,0 +1,12 @@
+-- <<도서관리>> 
+-- 1. 도서코드 자동세팅
+-- 1-1. 선택된 분야의 코드를 가져온다
+select concat(c_code,'___') from book_project.coden where c_name = '여행';
+-- 1-2. 해당 분야의 도서 권수 count
+select count(*) from book_project.bookInfo where b_code like 'J___';
+-- 1-3. 한줄로...
+select count(*) from book_project.bookInfo where b_code like (select concat(c_code,'___') from book_project.coden where c_name = 'IT');
+
+
+-- 2. 도서중복코드 자동세팅
+select count(*) from book_project.bookinfo where b_code = 'T001'; -- 를 b_sub_code 입력시에 자동으로 넣어준다

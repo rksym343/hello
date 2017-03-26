@@ -1,0 +1,84 @@
+-- <<대여관리>>
+-- #제일 처음 창이 뜰 때  
+-- 1. 대여가능 목록에 출력할 정보 [도서코드],[도서중복코드], [도서명],[저자],[출판사],[가격],[총대여횟수]
+SELECT b.b_code, b.b_sub_code, b_name, author, p.publisher, price, l.b_lend_count FROM book_project.bookInfo b 
+inner join book_project.publisherInfo p on b.p_code = p.p_code 
+inner join book_project.bookLend bl on b.b_code = bl.b_code and b.b_sub_code = bl.b_sub_code
+where l.is_lending = false;
+
+-- # 대여버튼 누르기
+-- 1. 대여가능목록에서 도서 선택시 입력창에 정보 뿌리기
+-- 1-1. 왼쪽 도서정보 뿌림 [도서코드],[도서중복코드],[도서명],[저자],[출판사],[가격],[총대여횟수]
+SELECT b.b_code, b.b_sub_code b_name, author, p.publisher, price, bl.b_lend_count FROM book_project.bookInfo b 
+inner join book_project.publisherInfo p on b.p_code = p.p_code 
+inner join book_project.bookLend bl on b.b_code = bl.b_code and b.b_sub_code = bl.b_sub_code
+where b.b_code= 'J001' and b.b_sub_code = 1;
+
+-- 2. 오른쪽에서 회원 검색 
+-- 2-0. 해당 회원이 존재하는가?
+select count(*) from book_project.memberlend where m_code = 'M011'; -- 있으면 1: 없으면 :0
+-- 2-1. 대여 가능한 회원인가? -- 대여불가시 창을 띄워서 정보 띄우지 않음
+select is_posbl from book_project.memberLend where m_code = 'M009'; -- 1/0 반환
+
+-- 2-1-1. 대여불가 회원이라면 블랙리스트 해당인지 검색
+select if(black_date is null, " ", black_date) from book_project.memberlend where m_code = 'M010'; -- 블랙 아닐시 " " 블랙일시 date 형식 반환
+--        --블랙이라면 ( 해당시 대여 금지마지막일 출력)(~~까지 대여불가)메세지 jLabel로 출력해줄 것;
+-- 2-1-2. 대여가능회원이라면  [회원코드], [성명],[전화번호] 출력;
+select m_code, m_name, m_tel from book_project.memberInfo where m_code = 'M009';
+
+-- 3. 대여버튼 // 트랜잭션 사용
+-- 3-1. <<회원대여정보>>테이블에서 [총대여권수] +1, <<도서대여정보>>테이블에서 [총대여횟수] +1
+-- UPDATE book_project.bookLend SET b_lend_count=(b_lend_count+1) WHERE b_code= 'T001' and b_sub_code = 2;-- 3
+-- UPDATE book_project.memberLend SET m_lend_count=(m_lend_count+1) WHERE m_code= 'M001';
+-- select m_lend_count from book_project.memberLend where m_code = 'M001';
+-- select b_lend_count, b_lend_count*2 from book_project.bookLend where b_code = 'T001' and b_sub_code = 2; -- 3 / 업데이트 제대로 되었는지 확인한 거
+-- 3-2. <<출납>>테이블 [회원코드],[도서코드],[대여일자(컴퓨터 현재일자): CURRENT_DATE()? now()?],[반납일자(초기화 : null)]
+-- INSERT INTO book_project.paymentIO (b_code, b_sub_code, m_code, lend_date, return_date) values (_b_code, _b_sub_code, _m_code, CURRENT_DATE(), null);
+-- select * from book_project.paymentIO;
+-- delete from book_project.paymentIO where no=100;
+-- 3-3. <<도서대여정보>>테이블에서 [대여여부] true 설정
+-- UPDATE book_project.bookLend SET is_lending=true WHERE b_code='J001'and b_sub_code = 2;
+delimiter $$
+create procedure book_project.proc_paymentIO_insert(
+	in _b_code char(4),
+	in _b_sub_code int(2),
+	in _m_code char(4)
+)
+begin 
+	declare _m_now_count int;
+	declare err int default 0;
+	declare continue handler for sqlexception set err = -1;
+	
+	
+	start transaction;
+	UPDATE book_project.bookLend SET  b_lend_count=(b_lend_count+1), is_lending=true WHERE b_code=_b_code and b_sub_code = _b_sub_code;
+	UPDATE book_project.memberLend SET  m_lend_count=(m_lend_count+1), m_now_count=(m_now_count+1) WHERE m_code=_m_code;
+	INSERT INTO paymentIO (b_code, b_sub_code, m_code, lend_date, return_date) VALUES(_b_code, _b_sub_code, _m_code, current_date, null);
+	select m_now_count into _m_now_count from book_project.memberlend where m_code = _m_code;
+	
+	if _m_now_count > 4 then -- [대여권수] 5권되면 [대여가능여부] false로 설정
+		update book_project.memberlend set is_posbl = false where m_code = _m_code;
+	end if;
+	
+	
+	if err < 0 then
+		rollback;
+	else
+		commit;
+	end if;
+	
+end $$
+delimiter ;
+
+
+
+-- 3-4. [도서 대여 가능 목록]에 자료 출력 : 1번 다시 실행
+SELECT b.b_code, b.b_sub_code, b_name, author, p.publisher, price, l.b_lend_count FROM book_project.bookInfo b 
+inner join book_project.publisherInfo p on b.p_code = p.p_code 
+inner join book_project.bookLend l on b.b_code = l.b_code and b.b_sub_code = l.b_sub_code
+where l.is_lending = false;
+
+SELECT b.b_code, b.b_sub_code, b_name, author, p.publisher, price, bl.b_lend_count FROM book_project.bookInfo b 
+inner join book_project.publisherInfo p on b.p_code = p.p_code 
+inner join book_project.bookLend bl on b.b_code = bl.b_code and b.b_sub_code = bl.b_sub_code
+where bl.is_lending = false;

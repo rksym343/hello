@@ -1,0 +1,198 @@
+-- 도서관
+DROP SCHEMA IF EXISTS book_project;
+
+-- 도서관
+CREATE SCHEMA book_project;
+
+-- 도서
+CREATE TABLE book_project.bookInfo (
+	b_code      CHAR(4)     NOT NULL, -- 도서코드
+	b_sub_code  INTEGER(2)  NOT NULL, -- 도서중복코드
+	c_name      VARCHAR(50) NULL,     -- 분류
+	b_name      VARCHAR(20) NULL,     -- 도서명
+	author      VARCHAR(20) NULL,     -- 저자
+	p_code      CHAR(4)     NULL,     -- 출판사코드
+	price       INTEGER     NULL,     -- 가격
+	insert_date DATE        NULL,     -- 도서등록일
+	is_del      BOOLEAN     NULL     DEFAULT false -- 도서폐기여부
+);
+
+-- 도서
+ALTER TABLE book_project.bookInfo
+	ADD CONSTRAINT PK_bookInfo -- 도서 기본키
+		PRIMARY KEY (
+			b_code,     -- 도서코드
+			b_sub_code  -- 도서중복코드
+		);
+
+-- 회원
+CREATE TABLE book_project.memberInfo (
+	m_code     CHAR(4)     NOT NULL, -- 회원코드
+	m_pass     VARCHAR(20) NULL,     -- 비밀번호
+	m_name     VARCHAR(20) NULL,     -- 성명
+	m_tel      CHAR(13)    NULL,     -- 연락처
+	m_zip_code INTEGER(5)  NULL,     -- 우편번호
+	m_address  VARCHAR(50) NULL,     -- 주소
+	is_manager BOOLEAN     NULL,     -- 관리자모드
+	is_secsn   BOOLEAN     NULL     DEFAULT false -- 탈퇴여부
+);
+
+-- 회원
+ALTER TABLE book_project.memberInfo
+	ADD CONSTRAINT PK_memberInfo -- 회원 기본키
+		PRIMARY KEY (
+			m_code -- 회원코드
+		);
+
+-- 출납
+CREATE TABLE book_project.paymentIO (
+	no          INTEGER    NOT NULL, -- 출납번호
+	b_code      CHAR(4)    NOT NULL, -- 도서코드
+	b_sub_code  INTEGER(2) NULL,     -- 도서중복코드
+	m_code      CHAR(4)    NOT NULL, -- 회원코드
+	lend_date   DATE       NULL,     -- 대여일
+	return_date DATE       NULL     DEFAULT null -- 반납일
+);
+
+-- 출납
+ALTER TABLE book_project.paymentIO
+	ADD CONSTRAINT PK_paymentIO -- 출납 기본키
+		PRIMARY KEY (
+			no -- 출납번호
+		);
+
+ALTER TABLE book_project.paymentIO
+	MODIFY COLUMN no INTEGER NOT NULL AUTO_INCREMENT;
+
+-- 출판사
+CREATE TABLE book_project.publisherInfo (
+	p_code     CHAR(4)     NOT NULL, -- 출판사코드
+	publisher  VARCHAR(50) NULL,     -- 출판사명
+	p_name     VARCHAR(20) NULL,     -- 담당자명
+	p_tel      VARCHAR(13) NULL,     -- 연락처
+	p_zip_code INTEGER(5)  NULL,     -- 우편번호
+	p_address  VARCHAR(50) NULL      -- 주소
+);
+
+-- 출판사
+ALTER TABLE book_project.publisherInfo
+	ADD CONSTRAINT PK_publisherInfo -- 출판사 기본키
+		PRIMARY KEY (
+			p_code -- 출판사코드
+		);
+
+-- 도서대여정보
+CREATE TABLE book_project.bookLend (
+	b_code       CHAR(4)    NOT NULL, -- 도서코드
+	b_sub_code   INTEGER(2) NOT NULL, -- 도서중복코드
+	is_lending   BOOLEAN    NULL     DEFAULT false, -- 대여여부
+	b_lend_count INTEGER    NULL     DEFAULT 0 -- 총 대여횟수
+);
+
+-- 도서대여정보
+ALTER TABLE book_project.bookLend
+	ADD CONSTRAINT PK_bookLend -- 도서대여정보 기본키
+		PRIMARY KEY (
+			b_code,     -- 도서코드
+			b_sub_code  -- 도서중복코드
+		);
+
+-- 회원대여정보
+CREATE TABLE book_project.memberLend (
+	m_code       CHAR(4) NOT NULL, -- 회원코드
+	is_posbl     BOOLEAN NULL     DEFAULT true, -- 대여가능여부
+	delay_count  INTEGER NULL     DEFAULT 0, -- 연체 횟수
+	m_lend_count INTEGER NULL     DEFAULT 0, -- 총 대여권수
+	m_now_count  INTEGER NULL     DEFAULT 0, -- 현재 대여권수
+	black_date   DATE    NULL      -- 대여금지일
+);
+
+-- 회원대여정보
+ALTER TABLE book_project.memberLend
+	ADD CONSTRAINT PK_memberLend -- 회원대여정보 기본키
+		PRIMARY KEY (
+			m_code -- 회원코드
+		);
+
+-- 도서분류
+CREATE TABLE book_project.coden (
+	c_name VARCHAR(50) NOT NULL, -- 분류
+	c_code CHAR(2)     NOT NULL  -- 코드
+);
+
+-- 도서분류
+ALTER TABLE book_project.coden
+	ADD CONSTRAINT PK_coden -- 도서분류 기본키
+		PRIMARY KEY (
+			c_name -- 분류
+		);
+
+-- 도서
+ALTER TABLE book_project.bookInfo
+	ADD CONSTRAINT FK_publisherInfo_TO_bookInfo -- 출판사 -> 도서
+		FOREIGN KEY (
+			p_code -- 출판사코드
+		)
+		REFERENCES book_project.publisherInfo ( -- 출판사
+			p_code -- 출판사코드
+		)
+		ON UPDATE CASCADE;
+
+-- 도서
+ALTER TABLE book_project.bookInfo
+	ADD CONSTRAINT FK_coden_TO_bookInfo -- 도서분류 -> 도서
+		FOREIGN KEY (
+			c_name -- 분류
+		)
+		REFERENCES book_project.coden ( -- 도서분류
+			c_name -- 분류
+		)
+		ON UPDATE CASCADE;
+
+-- 출납
+ALTER TABLE book_project.paymentIO
+	ADD CONSTRAINT FK_bookInfo_TO_paymentIO -- 도서 -> 출납
+		FOREIGN KEY (
+			b_code,     -- 도서코드
+			b_sub_code  -- 도서중복코드
+		)
+		REFERENCES book_project.bookInfo ( -- 도서
+			b_code,     -- 도서코드
+			b_sub_code  -- 도서중복코드
+		)
+		ON UPDATE CASCADE;
+
+-- 출납
+ALTER TABLE book_project.paymentIO
+	ADD CONSTRAINT FK_memberInfo_TO_paymentIO -- 회원 -> 출납
+		FOREIGN KEY (
+			m_code -- 회원코드
+		)
+		REFERENCES book_project.memberInfo ( -- 회원
+			m_code -- 회원코드
+		)
+		ON UPDATE CASCADE;
+
+-- 도서대여정보
+ALTER TABLE book_project.bookLend
+	ADD CONSTRAINT FK_bookInfo_TO_bookLend -- 도서 -> 도서대여정보
+		FOREIGN KEY (
+			b_code,     -- 도서코드
+			b_sub_code  -- 도서중복코드
+		)
+		REFERENCES book_project.bookInfo ( -- 도서
+			b_code,     -- 도서코드
+			b_sub_code  -- 도서중복코드
+		)
+		ON UPDATE CASCADE;
+
+-- 회원대여정보
+ALTER TABLE book_project.memberLend
+	ADD CONSTRAINT FK_memberInfo_TO_memberLend -- 회원 -> 회원대여정보
+		FOREIGN KEY (
+			m_code -- 회원코드
+		)
+		REFERENCES book_project.memberInfo ( -- 회원
+			m_code -- 회원코드
+		)
+		ON UPDATE CASCADE;

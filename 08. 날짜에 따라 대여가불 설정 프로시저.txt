@@ -1,0 +1,62 @@
+-- 회원대여정보 바꿔주는 프로시저
+-- 전체 바꾸기
+delimiter $$
+create procedure book_project.proc_memberLend_is_posbl_update()
+begin 
+
+	declare err int default 0;
+	declare continue handler for sqlexception set err = -1;
+	
+	start transaction;
+	
+	update book_project.memberlend set is_posbl = false 
+	where m_code in (select m_code from book_project.paymentio where return_date is null and DATE_ADD(lend_date, interval 2 day) < current_date);
+	
+	update book_project.memberlend set is_posbl = true, black_date = null
+	where m_code in (select * from (select m_code from book_project.memberlend where black_date < current_date) ml);
+	
+	if err < 0 then
+		rollback;
+	else
+		commit;
+	end if;
+	
+end $$
+delimiter ;
+
+-- 지정한 회원만 바꾸기
+delimiter $$
+create procedure book_project.proc_memberLend_is_posbl_update2(
+	in _m_code char(4)
+)
+begin 
+	declare datecnt int;
+	declare err int default 0;
+	declare continue handler for sqlexception set err = -1;
+	
+	start transaction;
+	
+	-- 연체발생시 대여불가설정
+	select datediff(current_date, DATE_ADD(lend_date, interval 2 day)) into datecnt from book_project.paymentio 
+	where return_date is null and m_code = _m_code;
+	if datecnt > 0 then 
+	 	update book_project.memberlend set is_posbl = false where m_code = _m_code;
+	end if;
+	
+	select black_date into @_black from book_project.memberlend where m_code = _m_code;
+	if @_black is not null then
+		if @_black < current_date then
+			update book_project.memberlend set is_posbl = true, black_date = null where m_code = _m_code;
+		end if;
+	end if;
+	
+	if err < 0 then
+		rollback;
+	else
+		commit;
+	end if;
+	
+end $$
+delimiter ;
+
+call book_project.proc_memberLend_is_posbl_update2('M005');
